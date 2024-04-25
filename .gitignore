@@ -1,0 +1,8 @@
+node_modules/
+package-lock.json
+elm-stuff/
+docs.json
+
+# Editors
+.idea/
+ElmjutsuDumMyM0DuL3.elm
