@@ -1,14 +1,14 @@
-Limit all imports to the format
+The [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rule
+[🔧 `Review.ImportSimple.rule`](https://package.elm-lang.org/packages/lue-bird/elm-review-import-simple/1.0.0/Review-ImportSimple/#rule)
+limits all imports to the format
 ```elm
 import Module.Name
 -- ✅ only module name
 import Module.Name exposing (ModuleName)
 -- ✅ only module name + exposed matching type name ignoring .s
 ```
-using the [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rule
-[🔧 `Review.ImportSimple.rule`](https://package.elm-lang.org/packages/lue-bird/elm-review-import-simple/1.0.0/Review-ImportSimple/#rule)
 
-Below imports would be reported for example:
+Anything else is reported:
 ```elm
 import Test exposing (test)
 -- ❌ values/functions
