@@ -1,6 +1,6 @@
 module Review.ImportSimple exposing (rule)
 
-{-| Limit the number of values allowed on a variant
+{-| Allow only simple imports
 
 @docs rule
 
