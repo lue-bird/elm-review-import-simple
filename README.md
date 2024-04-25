@@ -50,7 +50,7 @@ config =
 Being able to find out where a reference comes from at a glance without mental hoops or editor interaction is nice.
 
 ### 👍 no inconsistent imports
-Having a consistent import styles in the whole project allows
+Having a consistent import style in the whole project allows
   - moving code between modules/examples/chat forum
   - no need to switch mental context between modules ("oh, that's where we use exposed ui primitives")
 
