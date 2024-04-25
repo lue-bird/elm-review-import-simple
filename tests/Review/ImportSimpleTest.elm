@@ -64,6 +64,17 @@ a =
                     |> Review.Test.run Review.ImportSimple.rule
                     |> Review.Test.expectNoErrors
             )
+        , Test.test "not report when used unqualified reference is List (edge case because List isn't exposed from module List)"
+            (\() ->
+                """module A exposing (..)
+
+a : List a_
+a =
+    []
+"""
+                    |> Review.Test.run Review.ImportSimple.rule
+                    |> Review.Test.expectNoErrors
+            )
         , Test.test "report when function/value is exposed"
             (\() ->
                 """module A exposing (..)
