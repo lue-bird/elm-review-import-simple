@@ -1,5 +1,5 @@
 The [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rule
-[🔧 `Review.ImportSimple.rule`](https://package.elm-lang.org/packages/lue-bird/elm-review-import-simple/1.0.0/Review-ImportSimple/#rule "provides fixes")
+[🔧 `Review.ImportSimple.rule`](https://package.elm-lang.org/packages/lue-bird/elm-review-import-simple/1.0.2/Review-ImportSimple/#rule "provides fixes")
 limits all imports to the format
 ```elm
 import Module.Name
