@@ -53,6 +53,17 @@ a =
                     |> Review.Test.run Review.ImportSimple.rule
                     |> Review.Test.expectNoErrors
             )
+        , Test.test "not report when used unqualified reference is implicit"
+            (\() ->
+                """module A exposing (..)
+
+a : Sub a_
+a =
+    Sub.none
+"""
+                    |> Review.Test.run Review.ImportSimple.rule
+                    |> Review.Test.expectNoErrors
+            )
         , Test.test "report when function/value is exposed"
             (\() ->
                 """module A exposing (..)

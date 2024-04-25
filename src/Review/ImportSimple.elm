@@ -193,47 +193,56 @@ referenceFixQualification originLookup =
                 Nothing
 
             Just (moduleNamePart0 :: moduleNamePart1Up) ->
-                if reference.moduleName == (moduleNamePart0 :: moduleNamePart1Up) then
-                    Nothing
+                case implicitImports |> FastDict.get (moduleNamePart0 :: moduleNamePart1Up) of
+                    Nothing ->
+                        if reference.moduleName == (moduleNamePart0 :: moduleNamePart1Up) then
+                            Nothing
 
-                else if
-                    (reference.moduleName == [])
-                        && (reference.name == ((moduleNamePart0 :: moduleNamePart1Up) |> String.concat))
-                then
-                    Nothing
+                        else if
+                            (reference.moduleName == [])
+                                && (reference.name == ((moduleNamePart0 :: moduleNamePart1Up) |> String.concat))
+                        then
+                            Nothing
 
-                else
-                    case implicitImports |> FastDict.get (moduleNamePart0 :: moduleNamePart1Up) of
-                        Nothing ->
+                        else
                             { range = reference.range
                             , qualification = moduleNamePart0 :: moduleNamePart1Up
                             , name = reference.name
                             }
                                 |> Just
 
-                        Just implicitImportInfo ->
-                            case implicitImportInfo.alias of
-                                Just implicitAlias ->
-                                    if reference.moduleName == [ implicitAlias ] then
-                                        Nothing
+                    Just implicitImportInfo ->
+                        case implicitImportInfo.alias of
+                            Just implicitAlias ->
+                                if reference.moduleName == [ implicitAlias ] then
+                                    Nothing
 
-                                    else
-                                        { range = reference.range
-                                        , qualification = [ implicitAlias ]
-                                        , name = reference.name
-                                        }
-                                            |> Just
+                                else if
+                                    (reference.moduleName == [])
+                                        && (implicitImportInfo.exposed |> Set.member reference.name)
+                                then
+                                    Nothing
 
-                                Nothing ->
-                                    if implicitImportInfo.exposed |> Set.member reference.name then
-                                        Nothing
+                                else
+                                    { range = reference.range
+                                    , qualification = [ implicitAlias ]
+                                    , name = reference.name
+                                    }
+                                        |> Just
 
-                                    else
-                                        { range = reference.range
-                                        , qualification = moduleNamePart0 :: moduleNamePart1Up
-                                        , name = reference.name
-                                        }
-                                            |> Just
+                            Nothing ->
+                                if reference.moduleName == (moduleNamePart0 :: moduleNamePart1Up) then
+                                    Nothing
+
+                                else if implicitImportInfo.exposed |> Set.member reference.name then
+                                    Nothing
+
+                                else
+                                    { range = reference.range
+                                    , qualification = moduleNamePart0 :: moduleNamePart1Up
+                                    , name = reference.name
+                                    }
+                                        |> Just
 
 
 lineRange : Int -> Elm.Syntax.Range.Range
