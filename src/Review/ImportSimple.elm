@@ -185,68 +185,64 @@ referenceFixQualification :
     -> Maybe { range : Elm.Syntax.Range.Range, qualification : Elm.Syntax.ModuleName.ModuleName, name : String }
 referenceFixQualification originLookup =
     \reference ->
-        if (reference.moduleName == []) && (reference.name == "List") then
-            Nothing
+        case Review.ModuleNameLookupTable.moduleNameAt originLookup reference.lookupRange of
+            Nothing ->
+                Nothing
 
-        else
-            case Review.ModuleNameLookupTable.moduleNameAt originLookup reference.lookupRange of
-                Nothing ->
-                    Nothing
+            Just [] ->
+                Nothing
 
-                Just [] ->
-                    Nothing
+            Just (moduleNamePart0 :: moduleNamePart1Up) ->
+                case implicitImportsAccordingToModuleNameLookupTable |> FastDict.get (moduleNamePart0 :: moduleNamePart1Up) of
+                    Nothing ->
+                        if reference.moduleName == (moduleNamePart0 :: moduleNamePart1Up) then
+                            Nothing
 
-                Just (moduleNamePart0 :: moduleNamePart1Up) ->
-                    case implicitImports |> FastDict.get (moduleNamePart0 :: moduleNamePart1Up) of
-                        Nothing ->
-                            if reference.moduleName == (moduleNamePart0 :: moduleNamePart1Up) then
-                                Nothing
+                        else if
+                            (reference.moduleName == [])
+                                && (reference.name == ((moduleNamePart0 :: moduleNamePart1Up) |> String.concat))
+                        then
+                            Nothing
 
-                            else if
-                                (reference.moduleName == [])
-                                    && (reference.name == ((moduleNamePart0 :: moduleNamePart1Up) |> String.concat))
-                            then
-                                Nothing
+                        else
+                            { range = reference.range
+                            , qualification = moduleNamePart0 :: moduleNamePart1Up
+                            , name = reference.name
+                            }
+                                |> Just
 
-                            else
-                                { range = reference.range
-                                , qualification = moduleNamePart0 :: moduleNamePart1Up
-                                , name = reference.name
-                                }
-                                    |> Just
+                    Just implicitImportInfo ->
+                        case implicitImportInfo.alias of
+                            Just implicitAlias ->
+                                if reference.moduleName == [ implicitAlias ] then
+                                    Nothing
 
-                        Just implicitImportInfo ->
-                            case implicitImportInfo.alias of
-                                Just implicitAlias ->
-                                    if reference.moduleName == [ implicitAlias ] then
-                                        Nothing
+                                else if
+                                    (reference.moduleName == [])
+                                        && (implicitImportInfo.exposed |> Set.member reference.name)
+                                then
+                                    Nothing
 
-                                    else if
-                                        (reference.moduleName == [])
-                                            && (implicitImportInfo.exposed |> Set.member reference.name)
-                                    then
-                                        Nothing
+                                else
+                                    { range = reference.range
+                                    , qualification = [ implicitAlias ]
+                                    , name = reference.name
+                                    }
+                                        |> Just
 
-                                    else
-                                        { range = reference.range
-                                        , qualification = [ implicitAlias ]
-                                        , name = reference.name
-                                        }
-                                            |> Just
+                            Nothing ->
+                                if reference.moduleName == (moduleNamePart0 :: moduleNamePart1Up) then
+                                    Nothing
 
-                                Nothing ->
-                                    if reference.moduleName == (moduleNamePart0 :: moduleNamePart1Up) then
-                                        Nothing
+                                else if implicitImportInfo.exposed |> Set.member reference.name then
+                                    Nothing
 
-                                    else if implicitImportInfo.exposed |> Set.member reference.name then
-                                        Nothing
-
-                                    else
-                                        { range = reference.range
-                                        , qualification = moduleNamePart0 :: moduleNamePart1Up
-                                        , name = reference.name
-                                        }
-                                            |> Just
+                                else
+                                    { range = reference.range
+                                    , qualification = moduleNamePart0 :: moduleNamePart1Up
+                                    , name = reference.name
+                                    }
+                                        |> Just
 
 
 lineRange : Int -> Elm.Syntax.Range.Range
@@ -314,13 +310,13 @@ initialContextCreator =
 >     import Platform.Sub as Sub exposing (Sub)
 
 -}
-implicitImports :
+implicitImportsAccordingToModuleNameLookupTable :
     FastDict.Dict
         Elm.Syntax.ModuleName.ModuleName
         { alias : Maybe String
         , exposed : Set String -- includes names of variants
         }
-implicitImports =
+implicitImportsAccordingToModuleNameLookupTable =
     [ ( [ "Basics" ]
       , { alias = Nothing
         , exposed =
@@ -393,10 +389,7 @@ implicitImports =
                 |> Set.fromList
         }
       )
-    , -- exposing (List) excluded because List.List is not valid.
-      -- List is not exposed from module List
-      -- and is instead provided through compiler magic
-      ( [ "List" ], { alias = Nothing, exposed = Set.singleton "(::)" } )
+    , ( [ "List" ], { alias = Nothing, exposed = Set.fromList [ "List", "(::)" ] } )
     , ( [ "Maybe" ], { alias = Nothing, exposed = Set.fromList [ "Maybe", "Just", "Nothing" ] } )
     , ( [ "Result" ], { alias = Nothing, exposed = Set.fromList [ "Result", "Ok", "Err" ] } )
     , ( [ "String" ], { alias = Nothing, exposed = Set.singleton "String" } )
