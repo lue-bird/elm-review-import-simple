@@ -196,12 +196,14 @@ referenceFixQualification originLookup =
                 case implicitImportsAccordingToModuleNameLookupTable |> FastDict.get (moduleNamePart0 :: moduleNamePart1Up) of
                     Nothing ->
                         if reference.moduleName == (moduleNamePart0 :: moduleNamePart1Up) then
+                            -- already fully qualified
                             Nothing
 
                         else if
                             (reference.moduleName == [])
                                 && (reference.name == ((moduleNamePart0 :: moduleNamePart1Up) |> String.concat))
                         then
+                            -- allow exposed type/variant names that match the module name
                             Nothing
 
                         else
@@ -274,7 +276,13 @@ type alias Context =
             { row : Int
             , isMatchingTypeExposed : Bool
             }
-    , references : List { lookupRange : Elm.Syntax.Range.Range, range : Elm.Syntax.Range.Range, moduleName : Elm.Syntax.ModuleName.ModuleName, name : String }
+    , references :
+        List
+            { lookupRange : Elm.Syntax.Range.Range
+            , range : Elm.Syntax.Range.Range
+            , moduleName : Elm.Syntax.ModuleName.ModuleName
+            , name : String
+            }
     }
 
 
