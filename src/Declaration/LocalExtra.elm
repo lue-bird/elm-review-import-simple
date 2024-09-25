@@ -60,7 +60,16 @@ listReferences =
 
 referencesWithBranchLocalVariables :
     Set String
-    -> (Elm.Syntax.Declaration.Declaration -> List { lookupRange : Elm.Syntax.Range.Range, range : Elm.Syntax.Range.Range, moduleName : Elm.Syntax.ModuleName.ModuleName, name : String })
+    ->
+        (Elm.Syntax.Declaration.Declaration
+         ->
+            List
+                { lookupRange : Elm.Syntax.Range.Range
+                , range : Elm.Syntax.Range.Range
+                , moduleName : Elm.Syntax.ModuleName.ModuleName
+                , name : String
+                }
+        )
 referencesWithBranchLocalVariables branchLocalVariables =
     \declaration ->
         case declaration of
