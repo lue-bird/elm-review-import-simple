@@ -134,6 +134,93 @@ a =
 """
                         ]
             )
+        , Test.test "report multi-part import alias"
+            (\() ->
+                """module A exposing (..)
+import Html.Attributes as Attributes
+
+a =
+    Attributes.value
+"""
+                    |> Review.Test.run Review.ImportSimple.rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The imports aren't simple"
+                            , details =
+                                [ "Each import should be either import Module.Name or import Module.Name exposing (ModuleName). This ensures consistency across files and makes reference origins obvious."
+                                , "I suggest fixing this by fully qualifying the references or applying the automatic fix."
+                                ]
+                            , under = "import"
+                            }
+                            |> Review.Test.whenFixed
+                                """module A exposing (..)
+import Html.Attributes
+
+a =
+    Html.Attributes.value
+"""
+                        ]
+            )
+        , Test.test "report multi-part import alias and expose"
+            (\() ->
+                """module A exposing (..)
+import Html.Attributes as Attributes exposing (href)
+
+a =
+    [ Attributes.value, href ]
+"""
+                    |> Review.Test.run Review.ImportSimple.rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The imports aren't simple"
+                            , details =
+                                [ "Each import should be either import Module.Name or import Module.Name exposing (ModuleName). This ensures consistency across files and makes reference origins obvious."
+                                , "I suggest fixing this by fully qualifying the references or applying the automatic fix."
+                                ]
+                            , under = "import"
+                            }
+                            |> Review.Test.whenFixed
+                                """module A exposing (..)
+import Html.Attributes
+
+a =
+    [ Html.Attributes.value, Html.Attributes.href ]
+"""
+                        ]
+            )
+        , Test.test "report multi-part import alias with name that is defined locally as well"
+            (\() ->
+                """module A exposing (..)
+import Html.Attributes as Attributes
+
+a =
+    Attributes.value
+
+value =
+    0
+"""
+                    |> Review.Test.run Review.ImportSimple.rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The imports aren't simple"
+                            , details =
+                                [ "Each import should be either import Module.Name or import Module.Name exposing (ModuleName). This ensures consistency across files and makes reference origins obvious."
+                                , "I suggest fixing this by fully qualifying the references or applying the automatic fix."
+                                ]
+                            , under = "import"
+                            }
+                            |> Review.Test.whenFixed
+                                """module A exposing (..)
+import Html.Attributes
+
+a =
+    Html.Attributes.value
+
+value =
+    0
+"""
+                        ]
+            )
         , Test.test "report when implicit import is aliased differently"
             (\() ->
                 """module A exposing (..)
