@@ -21,7 +21,7 @@ referencesWithBranchLocalVariables branchLocalVariables =
     \(Elm.Syntax.Node.Node expressionRange expression) ->
         case expression of
             Elm.Syntax.Expression.FunctionOrValue qualification unqualifiedName ->
-                if branchLocalVariables |> Set.member unqualifiedName then
+                if qualification == [] && (branchLocalVariables |> Set.member unqualifiedName) then
                     []
 
                 else
