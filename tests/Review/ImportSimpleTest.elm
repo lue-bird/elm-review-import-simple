@@ -75,7 +75,7 @@ a =
                     |> Review.Test.run Review.ImportSimple.rule
                     |> Review.Test.expectNoErrors
             )
-        , Test.test "report when function/value is exposed"
+        , Test.test "report when function/value is exposed explicitly"
             (\() ->
                 """module A exposing (..)
 import Expect
@@ -102,6 +102,64 @@ import Test
 
 a =
     Test.test "passes" (\\() -> 1 |> Expect.equal 1)
+"""
+                        ]
+            )
+        , Test.test "report when function/value is exposed with (..)"
+            (\() ->
+                """module A exposing (..)
+import Task exposing (..)
+
+a =
+    perform identity
+"""
+                    |> Review.Test.run Review.ImportSimple.rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The imports aren't simple"
+                            , details =
+                                [ "Each import should be either import Module.Name or import Module.Name exposing (ModuleName). This ensures consistency across files and makes reference origins obvious."
+                                , "I suggest fixing this by fully qualifying the references or applying the automatic fix."
+                                ]
+                            , under = "import"
+                            }
+                            |> Review.Test.atExactly { start = { row = 2, column = 1 }, end = { row = 2, column = 7 } }
+                            |> Review.Test.whenFixed
+                                """module A exposing (..)
+import Task
+
+a =
+    Task.perform identity
+"""
+                        ]
+            )
+        , Test.test "report when type with same name is exposed with (..)"
+            (\() ->
+                """module A exposing (..)
+import Array exposing (..)
+
+a : Array () -> List ()
+a =
+    Array.toList << List.reverse
+"""
+                    |> Review.Test.run Review.ImportSimple.rule
+                    |> Review.Test.expectErrors
+                        [ Review.Test.error
+                            { message = "The imports aren't simple"
+                            , details =
+                                [ "Each import should be either import Module.Name or import Module.Name exposing (ModuleName). This ensures consistency across files and makes reference origins obvious."
+                                , "I suggest fixing this by fully qualifying the references or applying the automatic fix."
+                                ]
+                            , under = "import"
+                            }
+                            |> Review.Test.atExactly { start = { row = 2, column = 1 }, end = { row = 2, column = 7 } }
+                            |> Review.Test.whenFixed
+                                """module A exposing (..)
+import Array exposing (Array)
+
+a : Array () -> List ()
+a =
+    Array.toList << List.reverse
 """
                         ]
             )
@@ -161,7 +219,7 @@ a =
 """
                         ]
             )
-        , Test.test "report multi-part import alias and expose"
+        , Test.test "report multi-part import alias and explicit expose"
             (\() ->
                 """module A exposing (..)
 import Html.Attributes as Attributes exposing (href)
@@ -241,7 +299,6 @@ a =
                             }
                             |> Review.Test.whenFixed
                                 """module A exposing (..)
-import Platform.Sub
 
 a =
     Sub.none

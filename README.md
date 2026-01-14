@@ -1,5 +1,5 @@
 The [`elm-review`](https://package.elm-lang.org/packages/jfmengels/elm-review/latest/) rule
-[🔧 `Review.ImportSimple.rule`](https://package.elm-lang.org/packages/lue-bird/elm-review-import-simple/1.0.2/Review-ImportSimple/#rule "provides fixes")
+[🔧 `Review.ImportSimple.rule`](https://package.elm-lang.org/packages/lue-bird/elm-review-import-simple/1.0.3/Review-ImportSimple/#rule "provides fixes")
 limits all imports to the format
 ```elm
 import Module.Name
@@ -86,7 +86,7 @@ Another example
 ```elm
 module List.NonEmpty exposing (NonEmpty)
 ```
-it's not obvious that `NonEmpty` referring to a list.
+it's not obvious that `NonEmpty` refers to a list.
 ```elm
 module List.NonEmpty exposing (ListNonEmpty)
 ```

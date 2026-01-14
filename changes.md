@@ -1,5 +1,8 @@
 # change log
 
+#### 1.0.4 (unreleased)
+  - correct bug where types with the same name as the imported module name were not exposed
+
 #### 1.0.3
   - correct bug around using references with a name that is also declared locally.
     Thanks for [noticing](https://github.com/lue-bird/elm-review-import-simple/issues/1), [Wolfgang Schuster](https://github.com/wolfadex)!
