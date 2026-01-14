@@ -6,13 +6,15 @@ module Review.ImportSimple exposing (rule)
 
 -}
 
-import Declaration.LocalExtra
+import Elm.Syntax.Declaration
 import Elm.Syntax.Exposing
+import Elm.Syntax.Expression
 import Elm.Syntax.Import
 import Elm.Syntax.ModuleName
 import Elm.Syntax.Node
+import Elm.Syntax.Pattern
 import Elm.Syntax.Range
-import Expression.LocalExtra
+import Elm.Syntax.TypeAnnotation
 import FastDict
 import Review.Fix
 import Review.ModuleNameLookupTable
@@ -52,7 +54,7 @@ rule =
                 ( []
                 , { context
                     | references =
-                        (declaration |> Declaration.LocalExtra.surfaceReferences)
+                        (declaration |> declarationSurfaceReferences)
                             ++ context.references
                   }
                 )
@@ -62,7 +64,7 @@ rule =
                 ( []
                 , { context
                     | references =
-                        (expressionNode |> Expression.LocalExtra.surfaceReferences)
+                        (expressionNode |> expressionSurfaceReferences)
                             ++ context.references
                   }
                 )
@@ -237,13 +239,6 @@ initialContextCreator =
         |> Review.Rule.withModuleNameLookupTable
 
 
-qualifiedToString : { qualification : List String, name : String } -> String
-qualifiedToString qualified =
-    (qualified.qualification |> String.join ".")
-        ++ "."
-        ++ qualified.name
-
-
 referenceFixQualification :
     Elm.Syntax.ModuleName.ModuleName
     ->
@@ -330,6 +325,258 @@ importIsSimple import_ =
 
                                 _ ->
                                     False
+
+
+declarationSurfaceReferences :
+    Elm.Syntax.Declaration.Declaration
+    ->
+        List
+            { lookupRange : Elm.Syntax.Range.Range
+            , range : Elm.Syntax.Range.Range
+            , moduleName : Elm.Syntax.ModuleName.ModuleName
+            , name : String
+            }
+declarationSurfaceReferences declaration =
+    case declaration of
+        Elm.Syntax.Declaration.FunctionDeclaration functionDeclaration ->
+            (case functionDeclaration.signature of
+                Nothing ->
+                    []
+
+                Just (Elm.Syntax.Node.Node _ signature) ->
+                    signature.typeAnnotation |> typeReferences
+            )
+                ++ (functionDeclaration.declaration
+                        |> Elm.Syntax.Node.value
+                        |> .arguments
+                        |> List.concatMap patternReferences
+                   )
+
+        Elm.Syntax.Declaration.AliasDeclaration typeAliasDeclaration ->
+            typeAliasDeclaration.typeAnnotation |> typeReferences
+
+        Elm.Syntax.Declaration.CustomTypeDeclaration variantType ->
+            variantType.constructors
+                |> List.concatMap
+                    (\(Elm.Syntax.Node.Node _ variant) ->
+                        variant.arguments |> List.concatMap typeReferences
+                    )
+
+        Elm.Syntax.Declaration.PortDeclaration signature ->
+            signature.typeAnnotation |> typeReferences
+
+        -- not supported
+        Elm.Syntax.Declaration.InfixDeclaration _ ->
+            []
+
+        -- invalid
+        Elm.Syntax.Declaration.Destructuring _ _ ->
+            []
+
+
+expressionSurfaceReferences :
+    Elm.Syntax.Node.Node Elm.Syntax.Expression.Expression
+    ->
+        List
+            { lookupRange : Elm.Syntax.Range.Range
+            , range : Elm.Syntax.Range.Range
+            , moduleName : Elm.Syntax.ModuleName.ModuleName
+            , name : String
+            }
+expressionSurfaceReferences (Elm.Syntax.Node.Node expressionRange expression) =
+    case expression of
+        Elm.Syntax.Expression.FunctionOrValue qualification unqualifiedName ->
+            [ { lookupRange = expressionRange
+              , range = expressionRange
+              , moduleName = qualification
+              , name = unqualifiedName
+              }
+            ]
+
+        Elm.Syntax.Expression.RecordUpdateExpression (Elm.Syntax.Node.Node recordVariableRange recordVariable) _ ->
+            [ { lookupRange = recordVariableRange
+              , range = recordVariableRange
+              , moduleName = []
+              , name = recordVariable
+              }
+            ]
+
+        Elm.Syntax.Expression.LambdaExpression lambda ->
+            lambda.args |> List.concatMap patternReferences
+
+        Elm.Syntax.Expression.CaseExpression caseOf ->
+            caseOf.cases
+                |> List.concatMap
+                    (\( patternNode, _ ) ->
+                        patternNode |> patternReferences
+                    )
+
+        Elm.Syntax.Expression.LetExpression letIn ->
+            letIn.declarations
+                |> List.concatMap
+                    (\(Elm.Syntax.Node.Node _ letDeclaration) ->
+                        letDeclaration |> letDeclarationSurfaceReferences
+                    )
+
+        _ ->
+            []
+
+
+letDeclarationSurfaceReferences :
+    Elm.Syntax.Expression.LetDeclaration
+    ->
+        List
+            { lookupRange : Elm.Syntax.Range.Range
+            , range : Elm.Syntax.Range.Range
+            , moduleName : Elm.Syntax.ModuleName.ModuleName
+            , name : String
+            }
+letDeclarationSurfaceReferences letDeclaration =
+    case letDeclaration of
+        Elm.Syntax.Expression.LetDestructuring patternNode _ ->
+            patternNode |> patternReferences
+
+        Elm.Syntax.Expression.LetFunction letValueOrFunctionDeclaration ->
+            (case letValueOrFunctionDeclaration.signature of
+                Nothing ->
+                    []
+
+                Just (Elm.Syntax.Node.Node _ signature) ->
+                    signature.typeAnnotation |> typeReferences
+            )
+                ++ (letValueOrFunctionDeclaration.declaration
+                        |> Elm.Syntax.Node.value
+                        |> .arguments
+                        |> List.concatMap patternReferences
+                   )
+
+
+patternReferences :
+    Elm.Syntax.Node.Node Elm.Syntax.Pattern.Pattern
+    ->
+        List
+            { lookupRange : Elm.Syntax.Range.Range
+            , range : Elm.Syntax.Range.Range
+            , moduleName : Elm.Syntax.ModuleName.ModuleName
+            , name : String
+            }
+patternReferences (Elm.Syntax.Node.Node patternRange pattern) =
+    -- IGNORE TCO
+    case pattern of
+        Elm.Syntax.Pattern.AllPattern ->
+            []
+
+        Elm.Syntax.Pattern.UnitPattern ->
+            []
+
+        Elm.Syntax.Pattern.CharPattern _ ->
+            []
+
+        Elm.Syntax.Pattern.StringPattern _ ->
+            []
+
+        Elm.Syntax.Pattern.IntPattern _ ->
+            []
+
+        Elm.Syntax.Pattern.HexPattern _ ->
+            []
+
+        Elm.Syntax.Pattern.FloatPattern _ ->
+            []
+
+        Elm.Syntax.Pattern.VarPattern _ ->
+            []
+
+        Elm.Syntax.Pattern.RecordPattern _ ->
+            []
+
+        Elm.Syntax.Pattern.ParenthesizedPattern inParens ->
+            patternReferences inParens
+
+        Elm.Syntax.Pattern.AsPattern aliased _ ->
+            patternReferences aliased
+
+        Elm.Syntax.Pattern.UnConsPattern head tail ->
+            (tail |> patternReferences) ++ (head |> patternReferences)
+
+        Elm.Syntax.Pattern.TuplePattern parts ->
+            parts |> List.concatMap patternReferences
+
+        Elm.Syntax.Pattern.ListPattern elements ->
+            elements |> List.concatMap patternReferences
+
+        Elm.Syntax.Pattern.NamedPattern fullyQualified arguments ->
+            { lookupRange = patternRange
+            , range =
+                { start = patternRange.start
+                , end =
+                    { row = patternRange.start.row
+                    , column =
+                        patternRange.start.column
+                            + (fullyQualified |> syntaxQualifiedNameRefToString |> String.length)
+                    }
+                }
+            , moduleName = fullyQualified.moduleName
+            , name = fullyQualified.name
+            }
+                :: (arguments |> List.concatMap patternReferences)
+
+
+typeReferences :
+    Elm.Syntax.Node.Node Elm.Syntax.TypeAnnotation.TypeAnnotation
+    ->
+        List
+            { lookupRange : Elm.Syntax.Range.Range
+            , range : Elm.Syntax.Range.Range
+            , moduleName : Elm.Syntax.ModuleName.ModuleName
+            , name : String
+            }
+typeReferences (Elm.Syntax.Node.Node _ type_) =
+    case type_ of
+        Elm.Syntax.TypeAnnotation.GenericType _ ->
+            []
+
+        Elm.Syntax.TypeAnnotation.Unit ->
+            []
+
+        Elm.Syntax.TypeAnnotation.FunctionTypeAnnotation input output ->
+            (input |> typeReferences) ++ (output |> typeReferences)
+
+        Elm.Syntax.TypeAnnotation.Tupled parts ->
+            parts |> List.concatMap typeReferences
+
+        Elm.Syntax.TypeAnnotation.Record fields ->
+            fields |> List.concatMap (\(Elm.Syntax.Node.Node _ ( _, fieldValue )) -> fieldValue |> typeReferences)
+
+        Elm.Syntax.TypeAnnotation.GenericRecord _ (Elm.Syntax.Node.Node _ fields) ->
+            fields |> List.concatMap (\(Elm.Syntax.Node.Node _ ( _, fieldValue )) -> fieldValue |> typeReferences)
+
+        Elm.Syntax.TypeAnnotation.Typed (Elm.Syntax.Node.Node referenceRange ( moduleName, unqualifiedName )) arguments ->
+            { lookupRange = referenceRange
+            , range = referenceRange
+            , moduleName = moduleName
+            , name = unqualifiedName
+            }
+                :: (arguments |> List.concatMap typeReferences)
+
+
+syntaxQualifiedNameRefToString : Elm.Syntax.Pattern.QualifiedNameRef -> String
+syntaxQualifiedNameRefToString ref =
+    case ref.moduleName of
+        [] ->
+            ref.name
+
+        qualificationPart0 :: qualificationPart1Up ->
+            ((qualificationPart0 :: qualificationPart1Up) |> String.join ".")
+                ++ "."
+                ++ ref.name
+
+
+qualifiedToString : { qualification : List String, name : String } -> String
+qualifiedToString qualified =
+    (qualified.qualification |> String.join ".")
+        ++ "."
+        ++ qualified.name
 
 
 {-| From the `elm/core` readme:
