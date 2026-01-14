@@ -6,6 +6,7 @@ module Review.ImportSimple exposing (rule)
 
 -}
 
+import Dict exposing (Dict)
 import Elm.Syntax.Declaration
 import Elm.Syntax.Exposing
 import Elm.Syntax.Expression
@@ -15,7 +16,6 @@ import Elm.Syntax.Node
 import Elm.Syntax.Pattern
 import Elm.Syntax.Range
 import Elm.Syntax.TypeAnnotation
-import FastDict
 import Review.Fix
 import Review.ModuleNameLookupTable
 import Review.Rule
@@ -79,7 +79,7 @@ rule =
                         let
                             result :
                                 { simpleImportsWithMatchingTypeNameIsUsed :
-                                    FastDict.Dict Elm.Syntax.ModuleName.ModuleName Bool
+                                    Dict Elm.Syntax.ModuleName.ModuleName Bool
                                 , fixableReferences :
                                     List
                                         { range : Elm.Syntax.Range.Range
@@ -113,7 +113,7 @@ rule =
                                                                 }
                                                                     :: soFar.fixableReferences
                                                     , simpleImportsWithMatchingTypeNameIsUsed =
-                                                        if implicitImportsAccordingToModuleNameLookupTable |> FastDict.member moduleOrigin then
+                                                        if implicitImportsAccordingToModuleNameLookupTable |> Dict.member moduleOrigin then
                                                             soFar.simpleImportsWithMatchingTypeNameIsUsed
 
                                                         else if
@@ -121,12 +121,12 @@ rule =
                                                                 && (reference.name == (moduleOrigin |> String.concat))
                                                         then
                                                             soFar.simpleImportsWithMatchingTypeNameIsUsed
-                                                                |> FastDict.insert moduleOrigin
+                                                                |> Dict.insert moduleOrigin
                                                                     True
 
                                                         else
                                                             soFar.simpleImportsWithMatchingTypeNameIsUsed
-                                                                |> FastDict.update moduleOrigin
+                                                                |> Dict.update moduleOrigin
                                                                     (\maybeSimpleModuleOriginImportSoFar ->
                                                                         case maybeSimpleModuleOriginImportSoFar of
                                                                             Nothing ->
@@ -137,7 +137,7 @@ rule =
                                                                     )
                                                     }
                                         )
-                                        { simpleImportsWithMatchingTypeNameIsUsed = FastDict.empty
+                                        { simpleImportsWithMatchingTypeNameIsUsed = Dict.empty
                                         , fixableReferences = []
                                         }
 
@@ -166,7 +166,7 @@ rule =
                                 (Review.Fix.replaceRangeBy
                                     importsRange
                                     (result.simpleImportsWithMatchingTypeNameIsUsed
-                                        |> FastDict.foldl
+                                        |> Dict.foldl
                                             (\moduleName matchingTypeIsUsed soFar ->
                                                 soFar
                                                     ++ "\n"
@@ -249,7 +249,7 @@ referenceFixQualification :
         }
     -> Maybe Elm.Syntax.ModuleName.ModuleName
 referenceFixQualification originModuleName reference =
-    case implicitImportsAccordingToModuleNameLookupTable |> FastDict.get originModuleName of
+    case implicitImportsAccordingToModuleNameLookupTable |> Dict.get originModuleName of
         Nothing ->
             if reference.moduleName == originModuleName then
                 -- already fully qualified
@@ -600,7 +600,7 @@ qualifiedToString qualified =
 
 -}
 implicitImportsAccordingToModuleNameLookupTable :
-    FastDict.Dict
+    Dict
         Elm.Syntax.ModuleName.ModuleName
         { alias : Maybe String
         , exposed : Set String -- includes names of variants
@@ -689,7 +689,7 @@ implicitImportsAccordingToModuleNameLookupTable =
     , ( [ "Platform", "Cmd" ], { alias = Just "Cmd", exposed = Set.singleton "Cmd" } )
     , ( [ "Platform", "Sub" ], { alias = Just "Sub", exposed = Set.singleton "Sub" } )
     ]
-        |> FastDict.fromList
+        |> Dict.fromList
 
 
 listFilledLast : a -> List a -> a
