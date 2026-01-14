@@ -3,7 +3,7 @@
     "name": "lue-bird/elm-review-import-simple",
     "summary": "enforce `import Module [exposing (Module)]`",
     "license": "MIT",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "exposed-modules": [
         "Review.ImportSimple"
     ],
