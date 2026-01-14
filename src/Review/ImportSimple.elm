@@ -12,6 +12,7 @@ import Elm.Syntax.Import
 import Elm.Syntax.ModuleName
 import Elm.Syntax.Node
 import Elm.Syntax.Range
+import Expression.LocalExtra
 import FastDict
 import Review.Fix
 import Review.ModuleNameLookupTable
@@ -46,14 +47,23 @@ rule : Review.Rule.Rule
 rule =
     Review.Rule.newModuleRuleSchemaUsingContextCreator "Review.ImportSimple"
         initialContextCreator
-        |> Review.Rule.withDeclarationListVisitor
-            (\declarationList context ->
+        |> Review.Rule.withDeclarationEnterVisitor
+            (\(Elm.Syntax.Node.Node _ declaration) context ->
                 ( []
                 , { context
                     | references =
-                        declarationList
-                            |> List.map Elm.Syntax.Node.value
-                            |> Declaration.LocalExtra.listReferences
+                        (declaration |> Declaration.LocalExtra.surfaceReferences)
+                            ++ context.references
+                  }
+                )
+            )
+        |> Review.Rule.withExpressionEnterVisitor
+            (\expressionNode context ->
+                ( []
+                , { context
+                    | references =
+                        (expressionNode |> Expression.LocalExtra.surfaceReferences)
+                            ++ context.references
                   }
                 )
             )
